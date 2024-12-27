@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trending Topics</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        button { background-color: #007bff; color: white; border: none; padding: 10px 20px; font-size: 16px; cursor: pointer; }
+        #stop-btn{background-color: #ff0000; color: white; border: none; padding: 10px 20px; font-size: 16px; cursor: pointer;}
+        button:hover { background-color: #0056b3; }
+        .result, #progress-status { margin-top: 20px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; background-color: #f9f9f9; }
+        pre { background-color: #f1f1f1; padding: 10px; border-radius: 4px; }
+        #download-json-btn { margin-top: 10px; background-color: #28a745; color: white; border: none; padding: 10px 20px; font-size: 16px; cursor: pointer; }
+        #download-json-btn:hover { background-color: #218838; }
+    </style>
+</head>
+<body>
+    <h1>Trending Topics</h1>
+    <button id="run-script-btn">Run Script</button>
+    <button id="stop-btn">Stop</button>
+    <div id="progress-status">
+        <p><strong>Status:</strong> <span id="status-text">Idle</span></p>
+    </div>
+    <div id="results" class="result" style="display: none;">
+        <h3>Results:</h3>
+        <p id="date-time"></p>
+        <ul id="trending-topics"></ul>
+        <p><strong>IP Address Used:</strong> <span id="ip-address"></span></p>
+        <h4>JSON Record:</h4>
+        <pre id="json-record"></pre>
+    </div>
+    <h3>Previous Results</h3>
+    <ul id="previous-results"></ul>
+    <button id="download-json-btn">Download Latest Result as JSON</button>
+    <script>
+        const spinner = document.getElementById('loading-spinner');
+        const resultsDiv = document.getElementById('results');
+
+        document.getElementById('run-script-btn').addEventListener('click', async () => {
+    const resultsDiv = document.getElementById('results');
+    resultsDiv.style.display = 'none'; // Hide results while fetching
+
+    try {
+        const response = await fetch('/run-script');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+
+        if (data.error) {
+            alert(`Error: ${data.error}`);
+        } else {
+            // Display the results
+            document.getElementById('date-time').textContent = `As of ${data.timestamp}`;
+            document.getElementById('trending-topics').innerHTML = `
+                <li>${data.trend1}</li>
+                <li>${data.trend2}</li>
+                <li>${data.trend3}</li>
+                <li>${data.trend4}</li>
+                <li>${data.trend5}</li>
+            `;
+            document.getElementById('ip-address').textContent = data.ip_address;
+            document.getElementById('json-record').textContent = JSON.stringify(data, null, 2);
+            resultsDiv.style.display = 'block';
+        }
+    } catch (error) {
+        alert(`Failed to run script: ${error.message}`);
+        console.error(error);
+    }
+});
+
+        async function fetchProgress() {
+            const response = await fetch('/get-progress');
+            const data = await response.json();
+            document.getElementById('status-text').textContent = data.status;
+        }
+
+        document.getElementById('stop-script-btn').addEventListener('click', async () => {
+            const response = await fetch('/stop-script', { method: 'POST' });
+            const data = await response.json();
+            console.log(data);
+        });
+
+        async function fetchPreviousResults() {
+            const response = await fetch('/get-previous-results');
+            const results = await response.json();
+            const previousResultsEl = document.getElementById('previous-results');
+            previousResultsEl.innerHTML = results.map(result => `
+                <li>${result.trend1}, ${result.trend2}, ${result.trend3}, ${result.trend4}, ${result.trend5}</li>
+            `).join('');
+        }
+
+        setInterval(fetchProgress, 1000);
+        fetchPreviousResults();
+    </script>
+</body>
+</html>
